@@ -61,14 +61,7 @@ class GameObject {
 
 class Obstacle extends GameObject {
     constructor(x, y, width, height, tag) {
-        super(
-            x,
-            y,
-            width,
-            height,
-            tag,
-            "../flappy_gym_env/envs/pipe-green.png"
-        );
+        super(x, y, width, height, tag, "static/images/pipe-green.png");
         this.velocity = new Vector(-4, 0);
     }
     update() {
@@ -94,14 +87,7 @@ class Point extends GameObject {
 class Player extends GameObject {
     #G = 1.0;
     constructor() {
-        super(
-            100,
-            HEIGHT / 2,
-            25,
-            25,
-            "player",
-            "../flappy_gym_env/envs/Flappy.png"
-        );
+        super(100, HEIGHT / 2, 25, 25, "player", "static/images/Flappy.png");
     }
     update() {
         this.velocity.y += this.#G;
