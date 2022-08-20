@@ -1,0 +1,4 @@
+*.zip
+logs/*
+RL
+__pycache__
