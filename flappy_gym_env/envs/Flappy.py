@@ -209,7 +209,6 @@ class FlappyClass(gym.Env):
             rand = 0
             while rand == 0:
                 rand = int(np.random.rand() * (HEIGHT - 150))
-            # rand = 100
             self.objects.append(Object(WIDTH, 0, 40, rand, tag="UP"))
             self.objects.append(Object(WIDTH, rand + 120, 40, HEIGHT, tag="DOWN"))
             self.objects.append(Dummy(WIDTH + 25 + 15, rand, 5, 120))
