@@ -3,7 +3,9 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
     <script src="static/js/script.js"></script>
+    <script src="static/js/ppo.js"></script>
 </head>
 
 <body>
@@ -11,6 +13,7 @@
     <p>ハイスコア：<span id="high_score">0</span></p>
     <canvas width="400" height="400" id="canvas"></canvas>
     <p>操作方法：スペースキーでジャンプ</p>
+    <pre id="aa"></pre>
 </body>
 
 </html>

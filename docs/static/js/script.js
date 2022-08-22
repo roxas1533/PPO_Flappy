@@ -121,19 +121,41 @@ class GameScene {
         this.time = 0;
         this.score = 0;
         this.high_score = 0;
+        this.input_data = [];
+        this.model = new PPO();
     }
-    render(ctx) {
+    render(ctx, canvas) {
         this.obstacles.forEach((e) => {
             e.draw(ctx, "obstacle");
         });
         this.Player.draw(ctx);
+
+        const gray_data = gray(resize(canvas));
+        this.input_data = stack_frame(gray_data, this.input_data);
+        let sum = 0;
+        // for (let i = 0; i < this.input_data.length; i++) {
+        //     sum += this.input_data[i];
+        // }
+        // console.log(sum / this.input_data.length);
         ctx.font = "30px Brush Script MT";
         ctx.fillStyle = "white";
         const text = "SCORE: " + this.score;
         ctx.fillText(text, 200 - ctx.measureText(text).width / 2, 30);
     }
-    update() {
+    async update() {
         if (this.scene === "game") {
+            const data = Float32Array.from(this.input_data);
+            const data_tensor = new ort.Tensor(
+                "float32",
+                data,
+                [1, 5, 256, 256]
+            );
+            if (this.model.loaded) {
+                const act = await this.model.predict(data_tensor);
+                if (act == 1) {
+                    this.Player.jump();
+                }
+            }
             this.Player.update();
             this.obstacles.forEach((e) => {
                 e.update();
@@ -168,6 +190,7 @@ class GameScene {
                 this.high_score = Math.max(this.high_score, this.score);
                 this.high_score_area.innerHTML = this.high_score;
                 this.score = 0;
+                this.input_data = [];
             }
         }
     }
@@ -188,11 +211,11 @@ class CanvasObject {
         this.GameScene = new GameScene();
     }
 
-    render() {
+    async render() {
         this.ctx.fillStyle = "black";
         this.ctx.fillRect(0, 0, WIDTH, HEIGHT);
-        this.GameScene.update();
-        this.GameScene.render(this.ctx);
+        await this.GameScene.update();
+        this.GameScene.render(this.ctx, this.canvas);
         requestAnimationFrame(this.render.bind(this));
     }
 }

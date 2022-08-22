@@ -93,19 +93,29 @@ class Object(Box):
         self.tag = "OUT"
         self.tag2 = tag
         t = pipe.get_width() / width
-        self.pipe2 = pygame.transform.scale(
-            pipe, (self.width, int(pipe.get_height() * t))
-        )
+        self.pipe2 = pipe
         if tag == "UP":
             self.pipe2 = pygame.transform.flip(self.pipe2, False, True)
 
     def draw(self, pygame, screen):
         # pygame.draw.rect(screen, (128, 255, 127), (int(self.x), int(self.y), self.width, self.height), 0
-        screen.blit(
-            self.pipe2,
-            (self.x, self.y),
-            (0, self.pipe2.get_height() - self.height, 52, self.height),
-        )
+        if self.tag2 == "DOWN":
+            screen.blit(
+                self.pipe2,
+                (self.x, self.y),
+                (0, 0, self.pipe2.get_width(), self.height),
+            )
+        else:
+            screen.blit(
+                self.pipe2,
+                (self.x, self.y),
+                (
+                    0,
+                    self.pipe2.get_height() - self.height,
+                    self.pipe2.get_width(),
+                    self.height,
+                ),
+            )
 
     def update(self):
         super().update()

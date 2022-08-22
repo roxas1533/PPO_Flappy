@@ -2,3 +2,5 @@
 logs/*
 RL
 __pycache__
+.vscode
+*.onnx
