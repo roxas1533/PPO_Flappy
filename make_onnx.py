@@ -1,6 +1,5 @@
 import gym
 import numpy as np
-import onnxruntime
 import torch.onnx
 from stable_baselines3 import PPO
 from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv

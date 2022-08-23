@@ -6,14 +6,14 @@ class Vector {
         this.y = y;
     }
 }
+
 class GameObject {
     constructor(x, y, width, height, tag, image = null) {
         this.pos = new Vector(x, y);
         this.velocity = new Vector(0, 0);
         this.size = new Vector(width, height);
         if (image) {
-            this.image = new Image();
-            this.image.src = image;
+            this.image = image;
         }
         this.isDeath = false;
         this.tag = tag;
@@ -42,7 +42,7 @@ class GameObject {
                     this.size.y,
                     this.pos.x,
                     this.pos.y - (this.tag == "UP" ? this.size.y : 0),
-                    this.size.x,
+                    this.image.width,
                     this.size.y
                 );
                 ctx.restore();
@@ -58,10 +58,16 @@ class GameObject {
         );
     }
 }
+function make_image(img) {
+    const _img = new Image();
+    _img.src = img;
+    return _img;
+}
 
 class Obstacle extends GameObject {
+    static pipe_image = make_image("static/images/pipe-green.png");
     constructor(x, y, width, height, tag) {
-        super(x, y, width, height, tag, "static/images/pipe-green.png");
+        super(x, y, width, height, tag, Obstacle.pipe_image);
         this.velocity = new Vector(-4, 0);
     }
     update() {
@@ -86,8 +92,9 @@ class Point extends GameObject {
 
 class Player extends GameObject {
     #G = 1.0;
+    static player_image = make_image("static/images/Flappy.png");
     constructor() {
-        super(100, HEIGHT / 2, 25, 25, "player", "static/images/Flappy.png");
+        super(100, HEIGHT / 2, 25, 25, "player", Player.player_image);
     }
     update() {
         this.velocity.y += this.#G;
@@ -124,15 +131,54 @@ class GameScene {
         this.input_data = [];
         this.model = new PPO();
     }
-    render(ctx, canvas) {
+    async render(ctx, canvas) {
         this.obstacles.forEach((e) => {
             e.draw(ctx, "obstacle");
         });
         this.Player.draw(ctx);
 
-        const gray_data = gray(resize(canvas));
-        this.input_data = stack_frame(gray_data, this.input_data);
-        let sum = 0;
+        if (this.scene === "game") {
+            // const ctx2 = document.getElementById("aaaa").getContext("2d");
+            const resized = resize(canvas);
+            const gray_data = gray(ctx.getImageData(0, 0, 400, 400));
+            // ctx2.putImageData(gray_data, 0, 0);
+
+            // const gray_data = Array(256 * 256).fill(1);
+            this.input_data = stack_frame(gray_data, this.input_data);
+            const aa = document.getElementById("aa");
+            if (this.time == 2) {
+                let t = "";
+                // for (let i = 0; i < this.input_data.length; i += 5) {
+                //     const ii = i + 4;
+                //     t += this.input_data[ii] + ",";
+                //     if ((i / 5 + 1) % 400 === 0 && i != 0) {
+                //         t += "\n";
+                //     }
+                // }
+                for (let i = 0; i < gray_data.length; i++) {
+                    t += gray_data[i] + ",";
+                    if ((i + 1) % 400 === 0 && i != 0) {
+                        t += "\n";
+                    }
+                }
+                aa.innerHTML = t;
+            }
+            const data = Float32Array.from(this.input_data);
+            const data_tensor = new ort.Tensor(
+                "float32",
+                data,
+                [1, 5, 256, 256]
+            );
+            // if (this.model.loaded) {
+            //     const act = await this.model.predict(data_tensor);
+
+            //     console.log(act);
+            //     if ((Math.random() < act[0] ? 0 : 1) == 1) {
+            //         this.Player.jump();
+            //     }
+            // }
+        }
+        // let sum = 0;
         // for (let i = 0; i < this.input_data.length; i++) {
         //     sum += this.input_data[i];
         // }
@@ -144,18 +190,6 @@ class GameScene {
     }
     async update() {
         if (this.scene === "game") {
-            const data = Float32Array.from(this.input_data);
-            const data_tensor = new ort.Tensor(
-                "float32",
-                data,
-                [1, 5, 256, 256]
-            );
-            if (this.model.loaded) {
-                const act = await this.model.predict(data_tensor);
-                if (act == 1) {
-                    this.Player.jump();
-                }
-            }
             this.Player.update();
             this.obstacles.forEach((e) => {
                 e.update();
@@ -173,9 +207,9 @@ class GameScene {
             });
             if (this.time % 50 == 0) {
                 const rand = Math.random() * (400 - 150);
-                this.obstacles.push(new Obstacle(WIDTH, 0, 40, rand, "UP"));
+                this.obstacles.push(new Obstacle(WIDTH, 0, 52, rand, "UP"));
                 this.obstacles.push(
-                    new Obstacle(WIDTH, rand + 120, 40, HEIGHT, "DOWN")
+                    new Obstacle(WIDTH, rand + 120, 52, HEIGHT, "DOWN")
                 );
                 this.obstacles.push(
                     new Point(WIDTH + 25 + 15, rand, 5, 120, "player")
@@ -195,7 +229,7 @@ class GameScene {
         }
     }
     keyHandler(key) {
-        if (key.key === " ") {
+        if (key.key === " " && this.scene === "game") {
             this.Player.jump();
         }
         if (this.scene === "start") {
