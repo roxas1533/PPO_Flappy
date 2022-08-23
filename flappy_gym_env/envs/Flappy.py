@@ -6,6 +6,8 @@ import pygame
 from PIL import Image
 from pygame.locals import *
 
+from . import config
+
 WIDTH = 400
 HEIGHT = 400
 pachage_dir = os.path.dirname(__file__)
@@ -55,7 +57,6 @@ class Player(Box):
         flappyBird = pygame.transform.scale(flappyBird, (self.width, self.width))
 
     def draw(self, pygame, screen):
-        # pygame.draw.rect(screen, (255, 0, 0), (int(self.x), int(self.y), self.width, self.height), 0)
         screen.blit(flappyBird, (self.x, self.y))
 
     def update(self):
@@ -64,8 +65,6 @@ class Player(Box):
         self.veloY += self.G
         self.veloY = max(self.veloY, -8)
         self.veloY = min(self.veloY, 10)
-        # if self.y < 0:
-        #     self.y = 0
         if self.y < 0 or self.y + self.height > HEIGHT:
             self.isDeath = True
 
@@ -98,7 +97,6 @@ class Object(Box):
             self.pipe2 = pygame.transform.flip(self.pipe2, False, True)
 
     def draw(self, pygame, screen):
-        # pygame.draw.rect(screen, (128, 255, 127), (int(self.x), int(self.y), self.width, self.height), 0
         if self.tag2 == "DOWN":
             screen.blit(
                 self.pipe2,
@@ -125,7 +123,6 @@ class Object(Box):
 
 class NextPoint(Box):
     def draw(self, pygame, screen):
-        # pygame.draw.rect(screen, (255, 255, 255), (int(self.x), int(self.y), self.width, self.height), 0)
         pass
 
 
@@ -142,8 +139,9 @@ class Dummy(Box):
 
 class FlappyClass(gym.Env):
     def __init__(self):
-        os.environ["SDL_VIDEODRIVER"] = "dummy"
-        os.environ["SDL_AUDIODRIVER"] = "dummy"
+        if not config.render_display:
+            os.environ["SDL_VIDEODRIVER"] = "dummy"
+            os.environ["SDL_AUDIODRIVER"] = "dummy"
 
         self.done = True
         self.player = Player(100, HEIGHT / 2, 25, 25)
@@ -160,16 +158,23 @@ class FlappyClass(gym.Env):
 
         self.finish = False
         self.render()
-        self.observation_space = gym.spaces.Box(
-            low=0, high=400, shape=(2,), dtype=np.float32
-        )
+        if config.train_type == "mlp":
+            self.observation_space = gym.spaces.Box(
+                low=0, high=400, shape=(2,), dtype=np.float32
+            )
+        elif config.train_type == "cnn":
+            self.observation_space = gym.spaces.Box(
+                low=0, high=255, shape=(1, 5, 256, 256), dtype=np.uint8
+            )
+        else:
+            raise ValueError("train_type must be mlp or cnn")
 
     def render(self, mode="human"):
         if not self.isInited:
-            pygame.init()  # 初期化
-            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))  # ウィンドウサイズの指定
+            pygame.init()
+            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
             pygame.display.set_caption("GA_FLAPPY")
-            self.clock = pygame.time.Clock()  # A clock object to limit the frame rate.
+            self.clock = pygame.time.Clock()
             self.isInited = True
         for event in pygame.event.get():  # 終了処理
             if event.type == KEYDOWN:
@@ -182,7 +187,6 @@ class FlappyClass(gym.Env):
 
         for o in self.objects[:]:
             o.draw(pygame=pygame, screen=self.screen)
-        # self.screen.blit(f, (self.player.x, self.player.y))
         self.player.draw(pygame=pygame, screen=self.screen)
         self.point.draw(pygame=pygame, screen=self.screen)
         pygame.display.update()
@@ -228,7 +232,8 @@ class FlappyClass(gym.Env):
         self.time += 1
         if not self.finish:
             self.render()
-        # self.clock.tick(30)
+        if config.render_display:
+            self.clock.tick(60)
 
         return (
             self.WriteState(self.last_rand),
@@ -250,30 +255,24 @@ class FlappyClass(gym.Env):
 
         self.reward = 0
         rand = int(np.random.rand() * (HEIGHT - 150))
-        # self.objects.append(Object(self.player.x + 15, 0, 40, self.player.y - 45, tag="UP"))
-        # self.objects.append(Object(self.player.x + 15, self.player.y + 120 - 45, 40, HEIGHT, tag="DOWN"))
-        # self.objects.append(Dummy(self.player.x + 15 + 25 + 15, rand + self.player.y - 45, 5, 60))
         self.render()
-        #
-        # self.objects.append(Object(WIDTH - 70, 0, 25, rand, tag="UP"))
-        # self.objects.append(Object(WIDTH - 70, rand + 75, 25, HEIGHT, tag="DOWN"))
-        # self.objects.append(Dummy(WIDTH - 70 + 25 + 15, rand, 5, 60))
 
         return self.WriteState()
 
-    # [self.player.y / 200, abs(self.player.y + self.player.width / 2 - self.point.y) / 200,
-    #  (self.point.x - self.player.x) / 100]
-
     def WriteState(self, rand=0):
-        # image_data = pygame.surfarray.array3d(pygame.display.get_surface())
-        # pilImg = Image.fromarray(np.uint8(image_data))
-        # del image_data
-        # pilImg = pilImg.convert("L")
-        # pilImg = pilImg.resize((256, 256))
-        # pilImg = pilImg.rotate(-90)
-        # ImgArray = np.asarray(pilImg)
-        # ImgArray = ImgArray[:, :, np.newaxis]
-        state = [self.player.y + 25 / 2, rand + 60]
+        if config.train_type == "cnn":
+            image_data = pygame.surfarray.array3d(pygame.display.get_surface())
+            pilImg = Image.fromarray(np.uint8(image_data))
+            del image_data
+            pilImg = pilImg.convert("L")
+            pilImg = pilImg.resize((256, 256))
+            pilImg = pilImg.rotate(-90)
+            ImgArray = np.asarray(pilImg)
+            state = ImgArray[:, :, np.newaxis]
+        elif config.train_type == "mlp":
+            state = [self.player.y + 25 / 2, rand + 60]
+        else:
+            raise ValueError("train_type must be either mlp or cnn")
         return state
 
 
