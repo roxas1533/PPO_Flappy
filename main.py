@@ -19,12 +19,18 @@ env = VecFrameStack(env, n_stack=5, channels_order="last")
 
 # env = Flappy.FlappyClass()
 # eval_env = DummyVecEnv([lambda: Flappy.FlappyClass()])
-model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="flappy_tensorboard")
+model = PPO(
+    "MlpPolicy",
+    env,
+    verbose=1,
+    tensorboard_log="flappy_tensorboard_mlp",
+    learning_rate=2e-6,
+)
 model = PPO.load(
-    "myenv_ppo2_back",
+    "myenv_ppo2",
     env=env,
     verbose=1,
-    tensorboard_log="flappy_tensorboard",
+    tensorboard_log="flappy_tensorboard_mlp",
     learning_rate=2e-6,
 )
 model.learn(total_timesteps=100000 * 60)

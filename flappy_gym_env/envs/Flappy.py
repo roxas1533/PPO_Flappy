@@ -156,10 +156,12 @@ class FlappyClass(gym.Env):
         self.point = NextPoint(0, 0, 5, 5)
         self.action_space = gym.spaces.Discrete(2)
         self.reward = 0
+        self.last_rand = 0
+
         self.finish = False
         self.render()
         self.observation_space = gym.spaces.Box(
-            low=0, high=255, shape=(256, 256, 1), dtype=np.uint8
+            low=0, high=400, shape=(2,), dtype=np.float32
         )
 
     def render(self, mode="human"):
@@ -219,6 +221,7 @@ class FlappyClass(gym.Env):
             rand = 0
             while rand == 0:
                 rand = int(np.random.rand() * (HEIGHT - 150))
+                self.last_rand = rand
             self.objects.append(Object(WIDTH, 0, 40, rand, tag="UP"))
             self.objects.append(Object(WIDTH, rand + 120, 40, HEIGHT, tag="DOWN"))
             self.objects.append(Dummy(WIDTH + 25 + 15, rand, 5, 120))
@@ -227,7 +230,12 @@ class FlappyClass(gym.Env):
             self.render()
         # self.clock.tick(30)
 
-        return self.WriteState(), self.reward, done, {"finish": self.finish}
+        return (
+            self.WriteState(self.last_rand),
+            self.reward,
+            done,
+            {"finish": self.finish},
+        )
 
     def reset(self):
         self.player = Player(100, HEIGHT / 2, 25, 25)
@@ -238,6 +246,8 @@ class FlappyClass(gym.Env):
         self.isInited = False
         self.screen = None
         self.clock = None
+        self.last_rand = 0
+
         self.reward = 0
         rand = int(np.random.rand() * (HEIGHT - 150))
         # self.objects.append(Object(self.player.x + 15, 0, 40, self.player.y - 45, tag="UP"))
@@ -254,17 +264,17 @@ class FlappyClass(gym.Env):
     # [self.player.y / 200, abs(self.player.y + self.player.width / 2 - self.point.y) / 200,
     #  (self.point.x - self.player.x) / 100]
 
-    def WriteState(self):
-        image_data = pygame.surfarray.array3d(pygame.display.get_surface())
-        pilImg = Image.fromarray(np.uint8(image_data))
-        del image_data
-        pilImg = pilImg.convert("L")
-        pilImg = pilImg.resize((256, 256))
-        pilImg = pilImg.rotate(-90)
-        ImgArray = np.asarray(pilImg)
-        ImgArray = ImgArray[:, :, np.newaxis]
-        # print(ImgArray.shape)
-        return ImgArray
+    def WriteState(self, rand=0):
+        # image_data = pygame.surfarray.array3d(pygame.display.get_surface())
+        # pilImg = Image.fromarray(np.uint8(image_data))
+        # del image_data
+        # pilImg = pilImg.convert("L")
+        # pilImg = pilImg.resize((256, 256))
+        # pilImg = pilImg.rotate(-90)
+        # ImgArray = np.asarray(pilImg)
+        # ImgArray = ImgArray[:, :, np.newaxis]
+        state = [self.player.y + 25 / 2, rand + 60]
+        return state
 
 
 if __name__ == "__main__":

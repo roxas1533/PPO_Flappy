@@ -5,8 +5,9 @@ import torch.onnx
 from stable_baselines3 import PPO
 from stable_baselines3.common.atari_wrappers import MaxAndSkipEnv
 from stable_baselines3.common.vec_env import DummyVecEnv, VecFrameStack
-from torch import nn
+from torch import multinomial, nn
 from torch.distributions import Categorical
+from torch.distributions.utils import logits_to_probs
 from torchinfo import summary
 
 import flappy_gym_env
@@ -50,10 +51,17 @@ class GetAction(nn.Module):
     def forward(self, x):
         x = self.linear(self.cnn(x))
         x = self.fc(x)
-        dis = Categorical(logits=x)
-        probs_2d = dis.probs.reshape(-1, dis._num_events)
-        samples_2d = torch.multinomial(probs_2d, torch.Size().numel(), True)
-        return samples_2d
+        # dis = Categorical(logits=x)
+        probs = self.get_prob(x)
+        probs_2d = probs.reshape(-1, 2)
+        # samples_2d = multinomial(probs_2d, 1, True)
+        return probs_2d
+
+    def get_prob(self, x):
+        vmax = torch.max(x, -1, keepdim=True).values
+        out = torch.log(torch.sum(torch.exp(x - vmax), -1, keepdim=True)) + vmax
+        logits = x - out
+        return logits_to_probs(logits)
 
 
 # print(model.policy._predict(obs))
@@ -70,15 +78,16 @@ mm_state["fc.weight"] = model_state["action_net.weight"]
 mm_state["fc.bias"] = model_state["action_net.bias"]
 mm.load_state_dict(mm_state)
 # print(mm.state_dict().keys())
-
-torch.onnx.export(
-    mm,
-    pro_obs.detach(),
-    "flappy.onnx",
-    export_params=True,
-    input_names=["input"],  # モデルへの入力変数名
-    output_names=["output"],
-)
+print(mm.cpu()(pro_obs.detach().cpu()))
+# torch.onnx.export(
+#     mm,
+#     pro_obs.detach(),
+#     "flappy.onnx",
+#     opset_version=11,
+#     export_params=True,
+#     input_names=["input"],  # モデルへの入力変数名
+#     output_names=["output"],
+# )
 # features_extractor = onnxruntime.InferenceSession("flappy_features.onnx")
 # shared_net = onnxruntime.InferenceSession("flappy_shared_net.onnx")
 # latent_pi = onnxruntime.InferenceSession("flappy_policy_net.onnx")
