@@ -154,13 +154,12 @@ class FlappyClass(gym.Env):
         self.point = NextPoint(0, 0, 5, 5)
         self.action_space = gym.spaces.Discrete(2)
         self.reward = 0
-        self.last_rand = 0
 
         self.finish = False
         self.render()
         if config.train_type == "mlp":
             self.observation_space = gym.spaces.Box(
-                low=0, high=400, shape=(2,), dtype=np.float32
+                low=0, high=400, shape=(5,), dtype=np.float32
             )
         elif config.train_type == "cnn":
             self.observation_space = gym.spaces.Box(
@@ -197,8 +196,13 @@ class FlappyClass(gym.Env):
         self.reward = 0
         if action == 1:
             self.player.jump()
+        state_data = []
         for o in self.objects[:]:
             o.update()
+            if o.tag == "OK":
+                state_data.append(o.x)
+                state_data.append(o.y)
+
             if 0 < (o.x + o.width - self.player.x) and not pointFlag and o.tag2 == "UP":
                 self.min = o.x + o.width - self.player.x
                 self.point.x = o.x + o.width
@@ -213,6 +217,9 @@ class FlappyClass(gym.Env):
             if o.isDeath:
                 self.objects.remove(o)
 
+        if len(state_data) == 2:
+            state_data.append(0)
+            state_data.append(0)
         if not self.player.isDeath:
             self.player.update()
             self.reward += 0.1
@@ -225,7 +232,6 @@ class FlappyClass(gym.Env):
             rand = 0
             while rand == 0:
                 rand = int(np.random.rand() * (HEIGHT - 150))
-                self.last_rand = rand
             self.objects.append(Object(WIDTH, 0, 40, rand, tag="UP"))
             self.objects.append(Object(WIDTH, rand + 120, 40, HEIGHT, tag="DOWN"))
             self.objects.append(Dummy(WIDTH + 25 + 15, rand, 5, 120))
@@ -236,7 +242,7 @@ class FlappyClass(gym.Env):
             self.clock.tick(60)
 
         return (
-            self.WriteState(self.last_rand),
+            self.WriteState(state_data),
             self.reward,
             done,
             {"finish": self.finish},
@@ -251,7 +257,6 @@ class FlappyClass(gym.Env):
         self.isInited = False
         self.screen = None
         self.clock = None
-        self.last_rand = 0
 
         self.reward = 0
         rand = int(np.random.rand() * (HEIGHT - 150))
@@ -259,7 +264,7 @@ class FlappyClass(gym.Env):
 
         return self.WriteState()
 
-    def WriteState(self, rand=0):
+    def WriteState(self, state_data=[0, 0, 0, 0]):
         if config.train_type == "cnn":
             image_data = pygame.surfarray.array3d(pygame.display.get_surface())
             pilImg = Image.fromarray(np.uint8(image_data))
@@ -270,7 +275,7 @@ class FlappyClass(gym.Env):
             ImgArray = np.asarray(pilImg)
             state = ImgArray[:, :, np.newaxis]
         elif config.train_type == "mlp":
-            state = [self.player.y + 25 / 2, rand + 60]
+            state = [self.player.y + 25 / 2] + state_data
         else:
             raise ValueError("train_type must be either mlp or cnn")
         return state
