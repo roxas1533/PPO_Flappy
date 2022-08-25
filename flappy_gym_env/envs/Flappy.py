@@ -163,7 +163,7 @@ class FlappyClass(gym.Env):
             )
         elif config.train_type == "cnn":
             self.observation_space = gym.spaces.Box(
-                low=0, high=255, shape=(1, 5, 256, 256), dtype=np.uint8
+                low=0, high=255, shape=(256, 256, 1), dtype=np.uint8
             )
         else:
             raise ValueError("train_type must be mlp or cnn")
