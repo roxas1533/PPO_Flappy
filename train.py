@@ -11,7 +11,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecFram
 import flappy_gym_env
 
 
-def train(load_path, save_path, train_type):
+def train(load_path, save_path, train_type, lr):
     if not os.path.exists("./logs"):
         os.mkdir("./logs")
     env = gym.make("Flappy-v0")
@@ -25,7 +25,7 @@ def train(load_path, save_path, train_type):
             env,
             verbose=1,
             tensorboard_log="flappy_tensorboard_mlp",
-            learning_rate=2e-6,
+            learning_rate=lr,
         )
     else:
         model = PPO.load(
@@ -33,19 +33,10 @@ def train(load_path, save_path, train_type):
             env=env,
             verbose=1,
             tensorboard_log="flappy_tensorboard_mlp",
-            learning_rate=2e-6,
+            learning_rate=lr,
         )
     model.learn(total_timesteps=100000 * 60)
     model.save(save_path)
-
-    for i in range(100):
-        obs = env.reset()
-        while True:
-            action, _states = model.predict(obs)
-            obs, rewards, dones, info = env.step(action)
-            env.render()
-            if dones or info["finish"]:
-                break
 
 
 if __name__ == "__main__":
@@ -53,5 +44,6 @@ if __name__ == "__main__":
     parser.add_argument("--load", help="load model", default=None)
     parser.add_argument("--save", help="filename", default="myenv_ppo2")
     parser.add_argument("--train_type", help="train type cnn or mlp", default="mlp")
+    parser.add_argument("--lr", type=float, default=2e-6)
     args = parser.parse_args()
-    train(args.load, args.save, args.train_type)
+    train(args.load, args.save, args.train_type, args.lr)
