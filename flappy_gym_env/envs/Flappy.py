@@ -275,6 +275,8 @@ class FlappyClass(gym.Env):
             ImgArray = np.asarray(pilImg)
             state = ImgArray[:, :, np.newaxis]
         elif config.train_type == "mlp":
+            if len(state_data) == 0:
+                state_data = [0, 0, 0, 0]
             state = [self.player.y + 25 / 2] + state_data
         else:
             raise ValueError("train_type must be either mlp or cnn")
