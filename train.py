@@ -19,12 +19,18 @@ def train(load_path, save_path, train_type, lr):
     env = DummyVecEnv([lambda: env])
     env = VecFrameStack(env, n_stack=5, channels_order="last")
     flappy_gym_env.envs.config.train_type = train_type
+    if train_type == "mlp":
+        policy_type = "MlpPolicy"
+    elif train_type == "cnn":
+        policy_type = "CnnPolicy"
+    else:
+        raise ValueError("Wrong train type")
     if load_path is None:
         model = PPO(
-            "MlpPolicy" if train_type == "mlp" else "CnnPolicy",
+            policy_type,
             env,
             verbose=1,
-            tensorboard_log="flappy_tensorboard_mlp",
+            tensorboard_log=f"flappy_tensorboard_{train_type}",
             learning_rate=lr,
         )
     else:
@@ -32,7 +38,7 @@ def train(load_path, save_path, train_type, lr):
             load_path,
             env=env,
             verbose=1,
-            tensorboard_log="flappy_tensorboard_mlp",
+            tensorboard_log=f"flappy_tensorboard_{train_type}",
             learning_rate=lr,
         )
     model.learn(total_timesteps=100000 * 60)
