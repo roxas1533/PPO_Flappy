@@ -278,6 +278,7 @@ class FlappyClass(gym.Env):
             if len(state_data) == 0:
                 state_data = [0, 0, 0, 0]
             state = [self.player.y + 25 / 2] + state_data
+            state = np.array(state) / 400
         else:
             raise ValueError("train_type must be either mlp or cnn")
         return state
