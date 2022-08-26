@@ -159,7 +159,7 @@ class FlappyClass(gym.Env):
         self.render()
         if config.train_type == "mlp":
             self.observation_space = gym.spaces.Box(
-                low=0, high=400, shape=(5,), dtype=np.float32
+                low=0, high=1.0, shape=(5,), dtype=np.float32
             )
         elif config.train_type == "cnn":
             self.observation_space = gym.spaces.Box(
