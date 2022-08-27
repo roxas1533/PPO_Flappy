@@ -218,8 +218,9 @@ class FlappyClass(gym.Env):
                 pointFlag = True
             if o.col(self.player):
                 if o.tag == "OK":
-                    o.pointed = True
-                    self.reward += 0.8
+                    if not o.pointed:
+                        o.pointed = True
+                        self.reward += 0.8
                 else:
                     self.player.isDeath = True
             if o.isDeath:
