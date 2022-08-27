@@ -132,9 +132,15 @@ class Dummy(Box):
         self.veloX = -4
         self.tag = "OK"
         self.tag2 = "no"
+        self.pointed = False
 
     def draw(self, pygame, screen):
         pass
+
+    def update(self):
+        super().update()
+        if self.x + self.width < 0:
+            self.isDeath = True
 
 
 class FlappyClass(gym.Env):
@@ -159,7 +165,7 @@ class FlappyClass(gym.Env):
         self.render()
         if config.train_type == "mlp":
             self.observation_space = gym.spaces.Box(
-                low=0, high=1.0, shape=(5,), dtype=np.float32
+                low=0, high=1.0, shape=(13,), dtype=np.float32
             )
         elif config.train_type == "cnn":
             self.observation_space = gym.spaces.Box(
@@ -199,9 +205,11 @@ class FlappyClass(gym.Env):
         state_data = []
         for o in self.objects[:]:
             o.update()
-            if o.tag == "OK":
-                state_data.append(o.x)
-                state_data.append(o.y)
+            if o.tag2 == "UP":
+                state_data.append(o.height)
+                state_data.append(o.height + o.width)
+                state_data.append(o.height + o.width + 120)
+                state_data.append(o.height + 120)
 
             if 0 < (o.x + o.width - self.player.x) and not pointFlag and o.tag2 == "UP":
                 self.min = o.x + o.width - self.player.x
@@ -210,15 +218,14 @@ class FlappyClass(gym.Env):
                 pointFlag = True
             if o.col(self.player):
                 if o.tag == "OK":
-                    o.isDeath = True
+                    o.pointed = True
                     self.reward += 0.8
                 else:
                     self.player.isDeath = True
             if o.isDeath:
                 self.objects.remove(o)
 
-        if len(state_data) == 2:
-            state_data.append(0)
+        for _ in range(len(state_data), 12):
             state_data.append(0)
         if not self.player.isDeath:
             self.player.update()
@@ -264,7 +271,7 @@ class FlappyClass(gym.Env):
 
         return self.WriteState()
 
-    def WriteState(self, state_data=[0, 0, 0, 0]):
+    def WriteState(self, state_data=[]):
         if config.train_type == "cnn":
             image_data = pygame.surfarray.array3d(pygame.display.get_surface())
             pilImg = Image.fromarray(np.uint8(image_data))
@@ -276,8 +283,8 @@ class FlappyClass(gym.Env):
             state = ImgArray[:, :, np.newaxis]
         elif config.train_type == "mlp":
             if len(state_data) == 0:
-                state_data = [0, 0, 0, 0]
-            state = [self.player.y + 25 / 2] + state_data
+                state_data = [0 for _ in range(12)]
+            state = [self.player.y] + state_data
             state = np.array(state) / 400
         else:
             raise ValueError("train_type must be either mlp or cnn")
