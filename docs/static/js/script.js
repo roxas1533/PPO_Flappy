@@ -121,12 +121,13 @@ class Player extends GameObject {
 class GameScene {
     static random = new Random();
     static player_type = 0;
-    constructor(playerBtn) {
+    constructor(playerBtn, canvas) {
         this.high_score_area = document.getElementById("high_score");
         this.scene_type = ["start", "game"];
         this.scene = "start";
         this.Player = new Player();
         document.addEventListener("keydown", this.keyHandler.bind(this));
+        canvas.addEventListener("touchstart", this.tourchHandler.bind(this));
         this.obstacles = [];
         this.time = 0;
         this.score = 0;
@@ -213,6 +214,15 @@ class GameScene {
             this.scene = "game";
         }
     }
+    tourchHandler(e) {
+        e.preventDefault();
+        if (this.scene === "game" && GameScene.player_type === 0) {
+            this.Player.jump();
+        }
+        if (this.scene === "start") {
+            this.scene = "game";
+        }
+    }
 }
 
 class CanvasObject {
@@ -220,7 +230,7 @@ class CanvasObject {
         this.canvas = document.getElementById("canvas");
         this.ctx = this.canvas.getContext("2d");
         const playerBtn = document.getElementById("play");
-        this.GameScene = new GameScene(playerBtn);
+        this.GameScene = new GameScene(playerBtn, this.canvas);
         this.GameScene.input_data = Array(65).fill(0);
         this.GameScene.input_data[65 - 13] = this.GameScene.Player.pos.y / 400;
         this.model = new PPO();
@@ -252,5 +262,12 @@ class CanvasObject {
 
 window.onload = () => {
     const canvasObject = new CanvasObject();
+    document.addEventListener(
+        "dblclick",
+        function (e) {
+            e.preventDefault();
+        },
+        { passive: false }
+    );
     window.requestAnimationFrame(canvasObject.render.bind(canvasObject));
 };
