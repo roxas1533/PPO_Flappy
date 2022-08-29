@@ -184,7 +184,7 @@ class FlappyClass(gym.Env):
         for event in pygame.event.get():  # 終了処理
             if event.type == KEYDOWN:
                 self.player.jump()
-            if event.type == QUIT:
+            if event.type == QUIT or self.finish:
                 self.finish = True
                 break
         if not self.finish:
@@ -231,7 +231,6 @@ class FlappyClass(gym.Env):
         if not self.player.isDeath:
             self.player.update()
             self.reward += 0.1
-
         else:
             self.reward = -0.8
             done = True
@@ -265,9 +264,7 @@ class FlappyClass(gym.Env):
         self.isInited = False
         self.screen = None
         self.clock = None
-
         self.reward = 0
-        rand = int(np.random.rand() * (HEIGHT - 150))
         self.render()
 
         return self.WriteState()

@@ -4,13 +4,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-    <script src="static/js/script.js"></script>
     <script src="static/js/ppo.js"></script>
+
+    <script src="static/js/script.js"></script>
 </head>
 
 <body>
     <p>Flappy Bird</p>
-    <p>ハイスコア：<span id="high_score">0</span></p>
+    <div>
+        <p>ハイスコア：<span id="high_score">0</span></p>
+        <form id="play">
+            <label>手動<input type="radio" name="play" value="0" checked="checked"></label>
+            <label> AI<input type="radio" name="play" value="1"></label>
+        </form>
+    </div>
     <canvas width="400" height="400" id="canvas"></canvas>
     <p>操作方法：スペースキーでジャンプ</p>
     <pre id="aa"></pre>

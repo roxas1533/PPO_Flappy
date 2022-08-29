@@ -72,7 +72,7 @@ class Obstacle extends GameObject {
     }
     update() {
         this.pos.x += this.velocity.x;
-        if (this.pos.x + this.width < 0) {
+        if (this.pos.x + this.size.x < 0) {
             this.isDeath = true;
         }
     }
@@ -84,7 +84,7 @@ class Point extends GameObject {
     }
     update() {
         this.pos.x += this.velocity.x;
-        if (this.pos.x + this.width < 0) {
+        if (this.pos.x + this.size.x < 0) {
             this.isDeath = true;
         }
     }
@@ -97,11 +97,12 @@ class Player extends GameObject {
         super(100, HEIGHT / 2, 25, 25, "player", Player.player_image);
     }
     update() {
+        this.pos.x += this.velocity.x;
+        this.pos.y += this.velocity.y;
         this.velocity.y += this.#G;
         this.velocity.y = Math.max(this.velocity.y, -8);
         this.velocity.y = Math.min(this.velocity.y, 10);
-        this.pos.x += this.velocity.x;
-        this.pos.y += this.velocity.y;
+
         if (this.pos.y < 0 || this.pos.y + this.size.y > HEIGHT) {
             this.isDeath = true;
         }
@@ -118,7 +119,9 @@ class Player extends GameObject {
 }
 
 class GameScene {
-    constructor() {
+    static random = new Random();
+    static player_type = 0;
+    constructor(playerBtn) {
         this.high_score_area = document.getElementById("high_score");
         this.scene_type = ["start", "game"];
         this.scene = "start";
@@ -129,72 +132,31 @@ class GameScene {
         this.score = 0;
         this.high_score = 0;
         this.input_data = [];
-        this.model = new PPO();
     }
     async render(ctx, canvas) {
         this.obstacles.forEach((e) => {
             e.draw(ctx, "obstacle");
         });
         this.Player.draw(ctx);
-
-        if (this.scene === "game") {
-            // const ctx2 = document.getElementById("aaaa").getContext("2d");
-            const resized = resize(canvas);
-            const gray_data = gray(ctx.getImageData(0, 0, 400, 400));
-            // ctx2.putImageData(gray_data, 0, 0);
-
-            // const gray_data = Array(256 * 256).fill(1);
-            this.input_data = stack_frame(gray_data, this.input_data);
-            const aa = document.getElementById("aa");
-            if (this.time == 2) {
-                let t = "";
-                // for (let i = 0; i < this.input_data.length; i += 5) {
-                //     const ii = i + 4;
-                //     t += this.input_data[ii] + ",";
-                //     if ((i / 5 + 1) % 400 === 0 && i != 0) {
-                //         t += "\n";
-                //     }
-                // }
-                for (let i = 0; i < gray_data.length; i++) {
-                    t += gray_data[i] + ",";
-                    if ((i + 1) % 400 === 0 && i != 0) {
-                        t += "\n";
-                    }
-                }
-                aa.innerHTML = t;
-            }
-            const data = Float32Array.from(this.input_data);
-            const data_tensor = new ort.Tensor(
-                "float32",
-                data,
-                [1, 5, 256, 256]
-            );
-            // if (this.model.loaded) {
-            //     const act = await this.model.predict(data_tensor);
-
-            //     console.log(act);
-            //     if ((Math.random() < act[0] ? 0 : 1) == 1) {
-            //         this.Player.jump();
-            //     }
-            // }
-        }
-        // let sum = 0;
-        // for (let i = 0; i < this.input_data.length; i++) {
-        //     sum += this.input_data[i];
-        // }
-        // console.log(sum / this.input_data.length);
         ctx.font = "30px Brush Script MT";
         ctx.fillStyle = "white";
         const text = "SCORE: " + this.score;
         ctx.fillText(text, 200 - ctx.measureText(text).width / 2, 30);
     }
-    async update() {
+    async update(act = 0) {
         if (this.scene === "game") {
-            this.Player.update();
+            if (act) this.Player.jump();
+            let state = [0];
             this.obstacles.forEach((e) => {
                 e.update();
+                if (e.tag === "UP") {
+                    state.push(e.size.y / 400);
+                    state.push((e.size.y + e.size.x) / 400);
+                    state.push((e.size.y + e.size.x + 120) / 400);
+                    state.push((e.size.y + 120) / 400);
+                }
                 if (e.collides(this.Player)) {
-                    if (e.tag === "player") {
+                    if (e.tag === "OK") {
                         e.isDeath = true;
                         this.score += 1;
                     } else {
@@ -202,17 +164,20 @@ class GameScene {
                     }
                 }
             });
+
             this.obstacles = this.obstacles.filter((e) => {
                 return !e.isDeath;
             });
+            this.Player.update();
+
             if (this.time % 50 == 0) {
-                const rand = Math.random() * (400 - 150);
-                this.obstacles.push(new Obstacle(WIDTH, 0, 52, rand, "UP"));
+                const rand = GameScene.random.nextInt(0, 400 - 150);
+                this.obstacles.push(new Obstacle(WIDTH, 0, 40, rand, "UP"));
                 this.obstacles.push(
-                    new Obstacle(WIDTH, rand + 120, 52, HEIGHT, "DOWN")
+                    new Obstacle(WIDTH, rand + 120, 40, HEIGHT, "DOWN")
                 );
                 this.obstacles.push(
-                    new Point(WIDTH + 25 + 15, rand, 5, 120, "player")
+                    new Point(WIDTH + 25 + 15, rand, 40, 120, "OK")
                 );
             }
             this.time += 1;
@@ -225,11 +190,23 @@ class GameScene {
                 this.high_score_area.innerHTML = this.high_score;
                 this.score = 0;
                 this.input_data = [];
+                GameScene.random = new Random(
+                    Math.floor(Math.random() * 1000000 + 1)
+                );
             }
+            for (let i = state.length; i < 13; i++) {
+                state.push(0);
+            }
+            state[0] = this.Player.pos.y / 400;
+            this.input_data = stack_frame(state, this.input_data);
         }
     }
     keyHandler(key) {
-        if (key.key === " " && this.scene === "game") {
+        if (
+            key.key === " " &&
+            this.scene === "game" &&
+            GameScene.player_type === 0
+        ) {
             this.Player.jump();
         }
         if (this.scene === "start") {
@@ -242,13 +219,32 @@ class CanvasObject {
     constructor() {
         this.canvas = document.getElementById("canvas");
         this.ctx = this.canvas.getContext("2d");
-        this.GameScene = new GameScene();
+        const playerBtn = document.getElementById("play");
+        this.GameScene = new GameScene(playerBtn);
+        this.GameScene.input_data = Array(65).fill(0);
+        this.GameScene.input_data[65 - 13] = this.GameScene.Player.pos.y / 400;
+        this.model = new PPO();
+        playerBtn.addEventListener("change", (e) => {
+            GameScene.player_type = Number(e.target.value);
+        });
     }
 
     async render() {
         this.ctx.fillStyle = "black";
         this.ctx.fillRect(0, 0, WIDTH, HEIGHT);
-        await this.GameScene.update();
+        const data = Float32Array.from(this.GameScene.input_data);
+        const data_tensor = new ort.Tensor("float32", data, [1, 65]);
+        if (this.GameScene.scene === "game") {
+            let act = 0;
+
+            if (GameScene.player_type === 1) {
+                if (this.model.loaded) {
+                    act = await this.model.predict(data_tensor);
+                    act = Math.random() > act[0];
+                }
+            }
+            await this.GameScene.update(act);
+        }
         this.GameScene.render(this.ctx, this.canvas);
         requestAnimationFrame(this.render.bind(this));
     }
